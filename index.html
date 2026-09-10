@@ -260,6 +260,7 @@
     max-height:88vh; overflow-y:auto; padding:24px; box-shadow:var(--shadow);
     border:1px solid var(--border-strong);
   }
+  .modal.modal-wide{ max-width:620px; }
   .modal h2{ font-size:21px; margin:0 0 18px; }
   .field{ margin-bottom:13px; display:flex; flex-direction:column; gap:6px; }
   .field label{ font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-muted); }
@@ -345,6 +346,44 @@
 
   .list-row.dragover-row{ outline:2px dashed var(--accent); outline-offset:-3px; }
 
+  /* ---------- Bulk select / checkbox column ---------- */
+  .list-row.with-check, .list-head.with-check{ grid-template-columns: 26px 118px 1fr 150px 170px 24px 84px; }
+  @media (max-width: 720px){
+    .list-row.with-check, .list-head.with-check{ grid-template-columns: 22px 90px 1fr 70px; }
+  }
+  .list-check{ display:flex; align-items:center; }
+  .list-check input, .list-head.with-check > span:first-child input{ accent-color:var(--accent); width:15px; height:15px; cursor:pointer; }
+  .bulk-bar{ display:flex; align-items:center; gap:10px; background:var(--surface-2); border:1px solid var(--border-strong); border-radius:12px; padding:9px 14px; margin-bottom:10px; font-size:12.5px; color:var(--ink-2); flex-wrap:wrap; }
+  .bulk-bar select{ max-width:180px; }
+  .bulk-bar .spacer2{ flex:1; }
+
+  /* ---------- Projects view ---------- */
+  .project-group{ margin-bottom:18px; }
+  .project-group-head{ display:flex; align-items:center; gap:10px; padding:8px 4px; font-size:13.5px; font-weight:700; color:var(--ink); }
+  .project-group-count{ font-size:11px; font-weight:600; color:var(--ink-muted); background:var(--surface-2); border:1px solid var(--border-strong); padding:2px 9px; border-radius:999px; }
+  .project-group-body{ background:var(--surface-3); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+
+  /* ---------- Today / dashboard view ---------- */
+  .today-section{ margin-bottom:20px; }
+  .today-section-title{ font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-muted); margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .today-section-title .n{ background:var(--surface-2); border:1px solid var(--border-strong); border-radius:999px; padding:1px 9px; font-size:11px; }
+  .today-section-body{ background:var(--surface-3); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .today-empty{ padding:14px 16px; font-size:12.5px; color:var(--ink-muted); }
+
+  /* ---------- Status manager ---------- */
+  .status-manage-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .status-manage-row input[type=text]{ flex:1; }
+  .status-manage-row input[type=color]{ width:34px; height:34px; padding:2px; border-radius:8px; border:1px solid var(--border-strong); background:transparent; cursor:pointer; flex:none; }
+  .status-manage-row label.isdone{ font-size:10.5px; color:var(--ink-muted); display:flex; align-items:center; gap:4px; white-space:nowrap; flex:none; }
+  .status-manage-row .rm{ border:none; background:transparent; color:var(--ink-muted); cursor:pointer; font-size:16px; padding:2px 6px; flex:none; }
+  .status-manage-row .rm:hover{ color:var(--danger); }
+
+  /* ---------- Trash ---------- */
+  .trash-row{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--border); font-size:13px; flex-wrap:wrap; }
+  .trash-row:last-child{ border-bottom:none; }
+  .trash-row .ti{ flex:1 1 160px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); font-weight:600; }
+  .trash-row .meta{ font-size:11px; color:var(--ink-muted); white-space:nowrap; }
+
   /* ---------- Responsive ---------- */
   @media (max-width: 860px){
     .drawer{ display:none; }
@@ -390,8 +429,10 @@
     </div>
 
     <div class="seg" id="viewSeg">
-      <button data-view="kanban" class="active">Quadro</button>
+      <button data-view="today" class="active">Hoje</button>
+      <button data-view="kanban">Quadro</button>
       <button data-view="list">Lista</button>
+      <button data-view="projects">Projetos</button>
       <button data-view="calendar">Calendário</button>
     </div>
 
@@ -407,6 +448,8 @@
 
     <div class="spacer"></div>
 
+    <button class="btn btn-ghost btn-icon" id="manageStatusBtn" title="Gerenciar colunas de status">⚙️</button>
+    <button class="btn btn-ghost btn-icon" id="trashToggle" title="Lixeira">🗑️</button>
     <button class="btn btn-ghost btn-icon" id="themeToggle" title="Alternar tema claro/escuro">🌙</button>
     <button class="btn btn-ghost btn-icon" id="activityToggle" title="Atividade recente">🕘</button>
     <div class="who" id="whoBtn">
@@ -420,7 +463,15 @@
   <div class="main">
     <div class="content">
 
-      <div id="kanbanView">
+      <div id="todayView">
+        <div class="toolbar">
+          <div class="title">Hoje</div>
+          <span class="count-pill" id="todayCount">0 tarefas</span>
+        </div>
+        <div id="todayBody"></div>
+      </div>
+
+      <div id="kanbanView" style="display:none;">
         <div class="toolbar">
           <div class="title">Quadro</div>
           <span class="count-pill" id="kanbanCount">0 tarefas</span>
@@ -433,12 +484,28 @@
           <div class="title">Lista</div>
           <span class="count-pill" id="listCount">0 tarefas</span>
         </div>
+        <div class="bulk-bar" id="bulkBar" hidden>
+          <span id="bulkCount">0 selecionadas</span>
+          <select class="select" id="bulkStatus"><option value="">Mover para status…</option></select>
+          <select class="select" id="bulkAssignee"><option value="">Definir responsável…</option></select>
+          <span class="spacer2"></span>
+          <button class="btn btn-ghost" id="bulkTrash">🗑️ Mover para lixeira</button>
+          <button class="btn btn-ghost" id="bulkClear">Cancelar seleção</button>
+        </div>
         <div class="list-wrap">
-          <div class="list-head">
-            <span>Status</span><span>Tarefa</span><span>Cliente</span><span>Responsável</span><span></span><span>Prazo</span>
+          <div class="list-head with-check">
+            <span><input type="checkbox" id="selectAllCheck" title="Selecionar tudo"></span><span>Status</span><span>Tarefa</span><span>Cliente</span><span>Responsável</span><span></span><span>Prazo</span>
           </div>
           <div id="listBody"></div>
         </div>
+      </div>
+
+      <div id="projectsView" style="display:none;">
+        <div class="toolbar">
+          <div class="title">Projetos</div>
+          <span class="count-pill" id="projectsCount">0 clientes</span>
+        </div>
+        <div id="projectsBody"></div>
       </div>
 
       <div id="calendarView" style="display:none;">
@@ -483,6 +550,35 @@
       <div class="right">
         <button class="btn btn-ghost" id="pClose">Fechar</button>
         <button class="btn btn-primary" id="pEdit">Editar tarefa</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Status manager -->
+<div class="overlay" id="statusOverlay" hidden>
+  <div class="modal modal-wide">
+    <h2>Gerenciar colunas de status</h2>
+    <div id="statusManageBody"></div>
+    <button class="btn btn-ghost" id="statusAddBtn" type="button" style="width:100%; margin-top:4px;">+ Nova coluna</button>
+    <div class="modal-actions">
+      <div class="right">
+        <button class="btn btn-ghost" id="statusCancel">Cancelar</button>
+        <button class="btn btn-primary" id="statusSave">Salvar colunas</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Trash -->
+<div class="overlay" id="trashOverlay" hidden>
+  <div class="modal modal-wide">
+    <h2>Lixeira</h2>
+    <p style="margin-top:-8px; font-size:12px; color:var(--ink-muted);">Tarefas excluídas ficam aqui por 30 dias antes de serem apagadas de vez.</p>
+    <div id="trashBody" class="list-wrap"></div>
+    <div class="modal-actions">
+      <div class="right">
+        <button class="btn btn-ghost" id="trashClose">Fechar</button>
       </div>
     </div>
   </div>
@@ -539,9 +635,19 @@
         </select>
       </div>
     </div>
-    <div class="field">
-      <label>Status</label>
-      <select class="select" id="fStatus"></select>
+    <div class="field-row">
+      <div class="field">
+        <label>Status</label>
+        <select class="select" id="fStatus"></select>
+      </div>
+      <div class="field">
+        <label>Repetir</label>
+        <select class="select" id="fRecurrence">
+          <option value="none">Não repete</option>
+          <option value="weekly">Toda semana</option>
+          <option value="monthly">Todo mês</option>
+        </select>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-danger" id="fDelete" style="display:none;">Excluir</button>
@@ -583,12 +689,13 @@
   const auth = getAuth(firebaseApp);
   const db = getFirestore(firebaseApp);
 
-  var STATUSES = [
-    {id:'todo',   label:'A Fazer',     varc:'--status-todo',   varbg:'--status-todo-bg'},
-    {id:'doing',  label:'Fazendo',     varc:'--status-doing',  varbg:'--status-doing-bg'},
-    {id:'review', label:'Em Revisão',  varc:'--status-review', varbg:'--status-review-bg'},
-    {id:'done',   label:'Feito',       varc:'--status-done',   varbg:'--status-done-bg'}
+  var DEFAULT_STATUSES = [
+    {id:'todo',   label:'A Fazer',     color:'#8f8168', isDone:false},
+    {id:'doing',  label:'Fazendo',     color:'#7fa3d9', isDone:false},
+    {id:'review', label:'Em Revisão',  color:'#ec9f2e', isDone:false},
+    {id:'done',   label:'Feito',       color:'#5cc088', isDone:true}
   ];
+  var COLUMN_COLORS_DEFAULT = ['#8f8168','#7fa3d9','#ec9f2e','#5cc088','#e2604a','#b98fd6','#5fb8b0','#d98a5f'];
   var PRIORITY = {
     baixa:{label:'Baixa', color:'var(--status-todo)'},
     media:{label:'Média', color:'var(--status-review)'},
@@ -618,8 +725,9 @@
     tasks: [],
     members: [],
     activity: [],
+    statuses: DEFAULT_STATUSES.slice(),
     viewerName: null,
-    view: 'kanban',
+    view: 'today',
     calMode: 'month',
     calAnchor: new Date(),
     selectedDay: null,
@@ -628,7 +736,9 @@
     searchQuery: '',
     editingId: null,
     editingChecklist: [],
-    previewId: null
+    editingStatuses: [],
+    previewId: null,
+    selectedIds: new Set()
   };
   var dragListId = null;
   var previewCommentsUnsub = null;
@@ -652,7 +762,7 @@
     if (!parts[0]) return '?';
     return (parts[0][0] + (parts[1]?parts[1][0]:'')).toUpperCase();
   }
-  function statusMeta(id){ return STATUSES.filter(function(s){return s.id===id;})[0] || STATUSES[0]; }
+  function statusMeta(id){ return state.statuses.filter(function(s){return s.id===id;})[0] || state.statuses[0] || DEFAULT_STATUSES[0]; }
   function cap(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
   function toast(msg){
     var t = $('toast'); t.textContent = msg; t.classList.add('show');
@@ -704,6 +814,15 @@
   }
 
   var unsubscribers = [];
+  var TRASH_MAX_AGE_MS = 30 * 86400000;
+  function purgeOldTrash(){
+    if (!db) return;
+    state.tasks.forEach(function(t){
+      if (t.deletedAt && (Date.now() - new Date(t.deletedAt).getTime()) > TRASH_MAX_AGE_MS){
+        permanentlyDeleteTask(t.id).catch(function(){});
+      }
+    });
+  }
   function startBoard(){
     unsubscribers.forEach(function(u){ u(); });
     unsubscribers = [];
@@ -712,6 +831,7 @@
       state.tasks = snap.docs.map(function(d){ var data = d.data() || {}; data.id = d.id; return data; });
       renderAll();
       renderTagFilter();
+      purgeOldTrash();
     }, function(err){
       toast('Conexão com o quadro caiu — atualize a página.');
     }));
@@ -726,6 +846,18 @@
       renderActivity();
     }, function(){}));
 
+    unsubscribers.push(onSnapshot(doc(db,'settings','board'), function(snap){
+      var data = (snap && snap.exists && snap.exists()) ? snap.data() : null;
+      if (data && Array.isArray(data.statuses) && data.statuses.length){
+        state.statuses = data.statuses;
+      } else {
+        state.statuses = DEFAULT_STATUSES.slice();
+        setDoc(doc(db,'settings','board'), { statuses: state.statuses }).catch(function(){});
+      }
+      renderAll();
+      renderBulkOptions();
+    }, function(){}));
+
     if (state.viewerName) upsertMember(state.viewerName);
   }
   function stopBoard(){
@@ -738,12 +870,20 @@
   function renderAll(){
     renderKanban();
     renderList();
+    renderProjects();
+    renderToday();
     renderCalendar();
     renderActivity();
+    renderBulkOptions();
+    renderBulkBar();
+  }
+
+  function activeTasks(){
+    return state.tasks.filter(function(t){ return !t.deletedAt; });
   }
 
   function filteredTasks(){
-    var list = state.tasks;
+    var list = activeTasks();
     if (state.filterAssignee) list = list.filter(function(t){ return t.assignee === state.filterAssignee; });
     if (state.filterTag) list = list.filter(function(t){ return (t.tags||[]).indexOf(state.filterTag) >= 0; });
     if (state.searchQuery){
@@ -763,7 +903,7 @@
   }
 
   function isOverdue(t){
-    if (!t.dueDate || t.status === 'done') return false;
+    if (!t.dueDate || statusMeta(t.status).isDone) return false;
     return t.dueDate < todayISO();
   }
 
@@ -772,7 +912,7 @@
     var tasks = filteredTasks();
     $('kanbanCount').textContent = tasks.length + (tasks.length===1?' tarefa':' tarefas');
 
-    STATUSES.forEach(function(st){
+    state.statuses.forEach(function(st){
       var col = document.createElement('div');
       col.className = 'column';
       col.dataset.status = st.id;
@@ -781,7 +921,7 @@
       head.className = 'column-head';
       var colTasks = tasks.filter(function(t){ return t.status === st.id; });
       head.innerHTML =
-        '<span class="status-dot" style="background:var('+st.varc+')"></span>' +
+        '<span class="status-dot" style="background:'+st.color+'"></span>' +
         '<span class="column-title">'+esc(st.label)+'</span>' +
         '<span class="column-count">'+colTasks.length+'</span>';
       col.appendChild(head);
@@ -834,7 +974,7 @@
       html += '<span class="card-due'+(isOverdue(t)?' overdue':'')+'">📅 '+fmtDateShort(t.dueDate)+'</span>';
     }
     html += '<span class="spacer"></span>';
-    html += '<select class="card-move mono" data-move="'+t.id+'">' + STATUSES.map(function(s){
+    html += '<select class="card-move mono" data-move="'+t.id+'">' + state.statuses.map(function(s){
       return '<option value="'+s.id+'"'+(s.id===currentStatus?' selected':'')+'>'+esc(s.label)+'</option>';
     }).join('') + '</select>';
     html += '</div>';
@@ -859,7 +999,50 @@
     var from = statusMeta(t.status).label, to = statusMeta(newStatus).label;
     updateDoc(doc(db,'tasks',id), { status: newStatus, updatedAt: new Date().toISOString() }).then(function(){
       logActivity('moveu', { kind:'moved', taskTitle: t.title, from: from, to: to });
+      maybeSpawnRecurrence(t, newStatus);
     }).catch(function(){ toast('Não deu para mover a tarefa.'); });
+  }
+
+  // ---------- recurring tasks ----------
+  function nextFirstOpenStatusId(){
+    var open = state.statuses.filter(function(s){ return !s.isDone; });
+    return (open[0] || state.statuses[0] || DEFAULT_STATUSES[0]).id;
+  }
+  function addDaysISO(iso, days){
+    var d = iso ? parseISO(iso) : new Date();
+    d.setDate(d.getDate() + days);
+    return fmtISO(d);
+  }
+  function addMonthISO(iso){
+    var d = iso ? parseISO(iso) : new Date();
+    d.setMonth(d.getMonth() + 1);
+    return fmtISO(d);
+  }
+  function maybeSpawnRecurrence(task, newStatus){
+    if (!db || !task || !task.recurrence || task.recurrence === 'none') return;
+    if (!statusMeta(newStatus).isDone) return;
+    var base = task.dueDate || todayISO();
+    var nextDue = task.recurrence === 'weekly' ? addDaysISO(base, 7) : addMonthISO(base);
+    var clone = {
+      title: task.title,
+      description: task.description || '',
+      links: task.links || '',
+      tags: (task.tags||[]).slice(),
+      checklist: (task.checklist||[]).map(function(c){ return { text: c.text, done: false }; }),
+      client: task.client || '',
+      assignee: task.assignee || '',
+      dueDate: nextDue,
+      priority: task.priority || 'media',
+      status: nextFirstOpenStatusId(),
+      recurrence: task.recurrence,
+      createdAt: new Date().toISOString(),
+      createdBy: state.viewerName || 'Alguém',
+      updatedAt: new Date().toISOString(),
+      order: Date.now()
+    };
+    addDoc(collection(db,'tasks'), clone).then(function(){
+      toast('Próxima ocorrência de "'+task.title+'" criada para '+fmtDateShort(nextDue)+'.');
+    }).catch(function(){});
   }
 
   function renderAssigneeFilter(){
@@ -867,7 +1050,7 @@
     var current = sel.value;
     var names = {};
     state.members.forEach(function(m){ names[m.name]=1; });
-    state.tasks.forEach(function(t){ if (t.assignee) names[t.assignee]=1; });
+    activeTasks().forEach(function(t){ if (t.assignee) names[t.assignee]=1; });
     var list = Object.keys(names).sort();
     sel.innerHTML = '<option value="">Todos os responsáveis</option>' + list.map(function(n){
       return '<option value="'+esc(n)+'">'+esc(n)+'</option>';
@@ -879,14 +1062,14 @@
     var dl = $('memberList');
     var names = {};
     state.members.forEach(function(m){ names[m.name]=1; });
-    state.tasks.forEach(function(t){ if (t.assignee) names[t.assignee]=1; });
+    activeTasks().forEach(function(t){ if (t.assignee) names[t.assignee]=1; });
     dl.innerHTML = Object.keys(names).sort().map(function(n){ return '<option value="'+esc(n)+'">'; }).join('');
   }
   function renderTagFilter(){
     var sel = $('filterTag'); if (!sel) return;
     var current = sel.value;
     var names = {};
-    state.tasks.forEach(function(t){ (t.tags||[]).forEach(function(tg){ names[tg]=1; }); });
+    activeTasks().forEach(function(t){ (t.tags||[]).forEach(function(tg){ names[tg]=1; }); });
     var list = Object.keys(names).sort();
     sel.innerHTML = '<option value="">Todas as tags</option>' + list.map(function(n){
       return '<option value="'+esc(n)+'">'+esc(n)+'</option>';
@@ -902,32 +1085,55 @@
 
   // ---------- list view ----------
   function renderList(){
+    if (state.view !== 'list') return;
     var wrap = $('listBody'); if (!wrap) return;
     var tasks = filteredTasks().slice().sort(function(a,b){ return sortKey(a) - sortKey(b); });
     $('listCount').textContent = tasks.length + (tasks.length===1?' tarefa':' tarefas');
     wrap.innerHTML = '';
     if (!tasks.length){
       wrap.innerHTML = '<div class="empty-col" style="border:none;padding:26px 10px;">Nenhuma tarefa por aqui.</div>';
-      return;
+    } else {
+      tasks.forEach(function(t){ wrap.appendChild(renderListRow(t, true)); });
     }
-    tasks.forEach(function(t){ wrap.appendChild(renderListRow(t)); });
+    var allIds = tasks.map(function(t){ return t.id; });
+    var allSel = allIds.length>0 && allIds.every(function(id){ return state.selectedIds.has(id); });
+    var selectAll = $('selectAllCheck');
+    if (selectAll){
+      selectAll.checked = allSel;
+      selectAll.onchange = function(){
+        if (selectAll.checked){ allIds.forEach(function(id){ state.selectedIds.add(id); }); }
+        else { allIds.forEach(function(id){ state.selectedIds.delete(id); }); }
+        renderList(); renderBulkBar();
+      };
+    }
   }
-  function renderListRow(t){
+  function renderListRow(t, withCheck){
     var row = document.createElement('div');
-    row.className = 'list-row' + (isOverdue(t) ? ' overdue' : '');
+    row.className = 'list-row' + (isOverdue(t) ? ' overdue' : '') + (withCheck ? ' with-check' : '');
     row.dataset.id = t.id;
     row.draggable = true;
     var st = statusMeta(t.status);
     var prio = PRIORITY[t.priority] || PRIORITY.media;
     var html = '';
-    html += '<span class="list-status"><span class="status-dot" style="background:var('+st.varc+')"></span>'+esc(st.label)+'</span>';
-    html += '<span class="list-title">'+esc(t.title||'(sem título)')+'</span>';
+    if (withCheck){
+      html += '<span class="list-check"><input type="checkbox" data-select="'+t.id+'"'+(state.selectedIds.has(t.id)?' checked':'')+'></span>';
+    }
+    html += '<span class="list-status"><span class="status-dot" style="background:'+st.color+'"></span>'+esc(st.label)+'</span>';
+    html += '<span class="list-title">'+(t.recurrence && t.recurrence!=='none' ? '🔁 ' : '')+esc(t.title||'(sem título)')+'</span>';
     html += '<span class="list-client">'+(t.client?esc(t.client):'—')+'</span>';
     html += '<span class="list-assignee">'+(t.assignee ? avatarHTML(t.assignee,20)+'<span class="list-assignee-name">'+esc(t.assignee)+'</span>' : '—')+'</span>';
     html += '<span class="prio-dot" style="background:'+prio.color+'" title="Prioridade '+prio.label+'"></span>';
     html += '<span class="list-due'+(isOverdue(t)?' overdue':'')+'">'+(t.dueDate ? fmtDateShort(t.dueDate) : '—')+'</span>';
     row.innerHTML = html;
     row.addEventListener('click', function(){ openTaskPreview(t.id); });
+    if (withCheck){
+      var cb = row.querySelector('[data-select]');
+      cb.addEventListener('click', function(e){ e.stopPropagation(); });
+      cb.addEventListener('change', function(){
+        if (cb.checked) state.selectedIds.add(t.id); else state.selectedIds.delete(t.id);
+        renderBulkBar();
+      });
+    }
     row.addEventListener('dragstart', function(e){
       dragListId = t.id;
       try{ e.dataTransfer.setData('text/plain', t.id); }catch(err){}
@@ -944,6 +1150,113 @@
       dragListId = null;
     });
     return row;
+  }
+
+  // ---------- bulk actions ----------
+  function renderBulkOptions(){
+    var statusSel = $('bulkStatus');
+    if (statusSel){
+      var curS = statusSel.value;
+      statusSel.innerHTML = '<option value="">Mover para status…</option>' + state.statuses.map(function(s){
+        return '<option value="'+s.id+'">'+esc(s.label)+'</option>';
+      }).join('');
+      statusSel.value = curS;
+    }
+    var asgSel = $('bulkAssignee');
+    if (asgSel){
+      var curA = asgSel.value;
+      var names = {};
+      state.members.forEach(function(m){ names[m.name]=1; });
+      activeTasks().forEach(function(t){ if (t.assignee) names[t.assignee]=1; });
+      asgSel.innerHTML = '<option value="">Definir responsável…</option>' + Object.keys(names).sort().map(function(n){
+        return '<option value="'+esc(n)+'">'+esc(n)+'</option>';
+      }).join('');
+      asgSel.value = curA;
+    }
+  }
+  function renderBulkBar(){
+    var bar = $('bulkBar'); if (!bar) return;
+    var n = state.selectedIds.size;
+    bar.hidden = n === 0 || state.view !== 'list';
+    var countEl = $('bulkCount');
+    if (countEl) countEl.textContent = n + (n===1 ? ' selecionada' : ' selecionadas');
+  }
+  function clearSelection(){
+    state.selectedIds.clear();
+    renderList(); renderBulkBar();
+  }
+
+  // ---------- Projetos (por cliente) ----------
+  function renderProjects(){
+    if (state.view !== 'projects') return;
+    var body = $('projectsBody'); if (!body) return;
+    var tasks = filteredTasks();
+    var groups = {};
+    tasks.forEach(function(t){
+      var key = t.client && t.client.trim() ? t.client.trim() : 'Sem cliente';
+      (groups[key] = groups[key] || []).push(t);
+    });
+    var keys = Object.keys(groups).sort(function(a,b){ return a.localeCompare(b,'pt-BR'); });
+    $('projectsCount').textContent = keys.length + (keys.length===1?' cliente':' clientes');
+    body.innerHTML = '';
+    if (!keys.length){
+      body.innerHTML = '<div class="empty-col" style="border:none;padding:26px 10px;">Nenhuma tarefa por aqui.</div>';
+      return;
+    }
+    keys.forEach(function(key){
+      var groupTasks = groups[key].slice().sort(function(a,b){ return sortKey(a) - sortKey(b); });
+      var pending = groupTasks.filter(function(t){ return !statusMeta(t.status).isDone; }).length;
+      var wrap = document.createElement('div');
+      wrap.className = 'project-group';
+      var head = document.createElement('div');
+      head.className = 'project-group-head';
+      head.innerHTML = '<span>'+esc(key)+'</span><span class="project-group-count">'+pending+' pendente'+(pending===1?'':'s')+' de '+groupTasks.length+'</span>';
+      wrap.appendChild(head);
+      var listBox = document.createElement('div');
+      listBox.className = 'project-group-body';
+      groupTasks.forEach(function(t){ listBox.appendChild(renderListRow(t, false)); });
+      wrap.appendChild(listBox);
+      body.appendChild(wrap);
+    });
+  }
+
+  // ---------- Hoje / dashboard ----------
+  function todaySection(title, tasks){
+    var box = document.createElement('div');
+    box.className = 'today-section';
+    var head = document.createElement('div');
+    head.className = 'today-section-title';
+    head.innerHTML = '<span>'+esc(title)+'</span><span class="n">'+tasks.length+'</span>';
+    box.appendChild(head);
+    var listBox = document.createElement('div');
+    listBox.className = 'today-section-body';
+    if (!tasks.length){
+      listBox.innerHTML = '<div class="today-empty">Nada por aqui.</div>';
+    } else {
+      tasks.forEach(function(t){ listBox.appendChild(renderListRow(t, false)); });
+    }
+    box.appendChild(listBox);
+    return box;
+  }
+  function renderToday(){
+    if (state.view !== 'today') return;
+    var body = $('todayBody'); if (!body) return;
+    var tasks = filteredTasks();
+    var today = todayISO();
+    var in7 = addDaysISO(today, 7);
+    var overdue = [], dueToday = [], upcoming = [];
+    tasks.forEach(function(t){
+      if (!t.dueDate) return;
+      if (isOverdue(t)) overdue.push(t);
+      else if (t.dueDate === today) dueToday.push(t);
+      else if (t.dueDate > today && t.dueDate <= in7) upcoming.push(t);
+    });
+    [overdue, dueToday, upcoming].forEach(function(list){ list.sort(function(a,b){ return (a.dueDate||'') < (b.dueDate||'') ? -1 : 1; }); });
+    $('todayCount').textContent = (overdue.length + dueToday.length) + (overdue.length + dueToday.length === 1 ? ' tarefa' : ' tarefas');
+    body.innerHTML = '';
+    body.appendChild(todaySection('Atrasadas', overdue));
+    body.appendChild(todaySection('Hoje', dueToday));
+    body.appendChild(todaySection('Próximos 7 dias', upcoming));
   }
   function reorderTask(draggedId, targetId, before){
     if (!db) return;
@@ -1091,7 +1404,8 @@
   function openTaskModal(id, prefillDate){
     state.editingId = id;
     var fStatusSel = $('fStatus');
-    fStatusSel.innerHTML = STATUSES.map(function(s){ return '<option value="'+s.id+'">'+esc(s.label)+'</option>'; }).join('');
+    fStatusSel.innerHTML = state.statuses.map(function(s){ return '<option value="'+s.id+'">'+esc(s.label)+'</option>'; }).join('');
+    var fRecurrenceSel = $('fRecurrence');
 
     if (id){
       var t = state.tasks.filter(function(x){return x.id===id;})[0];
@@ -1105,7 +1419,8 @@
       $('fAssignee').value = t.assignee || '';
       $('fDue').value = t.dueDate || '';
       $('fPriority').value = t.priority || 'media';
-      fStatusSel.value = t.status || 'todo';
+      fStatusSel.value = t.status || (state.statuses[0]&&state.statuses[0].id) || 'todo';
+      if (fRecurrenceSel) fRecurrenceSel.value = t.recurrence || 'none';
       $('fDelete').style.display = 'inline-flex';
       state.editingChecklist = (t.checklist||[]).map(function(c){ return { text: c.text, done: !!c.done }; });
     } else {
@@ -1118,7 +1433,8 @@
       $('fAssignee').value = state.viewerName || '';
       $('fDue').value = prefillDate || '';
       $('fPriority').value = 'media';
-      fStatusSel.value = 'todo';
+      fStatusSel.value = (state.statuses[0]&&state.statuses[0].id) || 'todo';
+      if (fRecurrenceSel) fRecurrenceSel.value = 'none';
       $('fDelete').style.display = 'none';
       state.editingChecklist = [];
     }
@@ -1142,8 +1458,11 @@
     var html = '';
     html += '<div class="preview-badges">';
     if (t.client) html += '<span class="card-tag">'+esc(t.client)+'</span>';
-    html += '<span class="list-status"><span class="status-dot" style="background:var('+st.varc+')"></span>'+esc(st.label)+'</span>';
+    html += '<span class="list-status"><span class="status-dot" style="background:'+st.color+'"></span>'+esc(st.label)+'</span>';
     html += '<span class="list-status"><span class="prio-dot" style="background:'+prio.color+'"></span>Prioridade '+esc(prio.label)+'</span>';
+    if (t.recurrence && t.recurrence !== 'none'){
+      html += '<span class="list-status">🔁 '+(t.recurrence==='weekly'?'Toda semana':'Todo mês')+'</span>';
+    }
     html += '</div>';
     html += '<h2 style="margin-top:0;">'+esc(t.title||'(sem título)')+'</h2>';
     if (t.tags && t.tags.length){
@@ -1228,6 +1547,7 @@
     if (!db){ toast('Sem conexão com o quadro agora.'); return; }
     var title = $('fTitle').value.trim();
     if (!title){ $('fTitle').focus(); return; }
+    var recurEl = $('fRecurrence');
     var body = {
       title: title,
       description: $('fDesc').value.trim(),
@@ -1239,14 +1559,20 @@
       dueDate: $('fDue').value || null,
       priority: $('fPriority').value,
       status: $('fStatus').value,
+      recurrence: recurEl ? recurEl.value : 'none',
       updatedAt: new Date().toISOString()
     };
     if (body.assignee) upsertMember(body.assignee);
 
     if (state.editingId){
+      var prevTask = state.tasks.filter(function(x){return x.id===state.editingId;})[0];
+      var prevStatus = prevTask ? prevTask.status : null;
       updateDoc(doc(db,'tasks',state.editingId), body).then(function(){
         logActivity('atualizou', { taskTitle: title });
         toast('Tarefa atualizada.');
+        if (prevTask && prevStatus !== body.status){
+          maybeSpawnRecurrence(Object.assign({}, prevTask, body), body.status);
+        }
         closeTaskModal();
       }).catch(function(){ toast('Não deu para salvar.'); });
     } else {
@@ -1264,16 +1590,121 @@
     if (!db || !state.editingId) return;
     var id = state.editingId;
     var t = state.tasks.filter(function(x){return x.id===id;})[0];
-    if (!confirm('Excluir "'+(t?t.title:'')+'"? Essa ação não pode ser desfeita, incluindo comentários e anexos ligados a ela.')) return;
-    getDocs(collection(db,'tasks',id,'comments')).then(function(snap){
-      return Promise.all(snap.docs.map(function(d){ return deleteDoc(doc(db,'tasks',id,'comments',d.id)); }));
-    }).catch(function(){ /* segue mesmo se falhar a limpeza dos comentários */ }).then(function(){
-      return deleteDoc(doc(db,'tasks',id));
-    }).then(function(){
+    if (!confirm('Mover "'+(t?t.title:'')+'" para a lixeira? Você pode restaurar depois, dentro de 30 dias.')) return;
+    moveTaskToTrash(id).then(function(){
       logActivity('excluiu', { taskTitle: t ? t.title : '' });
-      toast('Tarefa excluída.');
+      toast('Tarefa movida para a lixeira.');
       closeTaskModal();
     }).catch(function(){ toast('Não deu para excluir.'); });
+  }
+  function moveTaskToTrash(id){
+    return updateDoc(doc(db,'tasks',id), {
+      deletedAt: new Date().toISOString(),
+      deletedBy: state.viewerName || 'Alguém'
+    });
+  }
+  function restoreTask(id){
+    if (!db) return;
+    updateDoc(doc(db,'tasks',id), { deletedAt: null, deletedBy: null }).then(function(){
+      toast('Tarefa restaurada.');
+      renderTrash();
+    }).catch(function(){ toast('Não deu para restaurar.'); });
+  }
+  function permanentlyDeleteTask(id){
+    if (!db) return Promise.resolve();
+    return getDocs(collection(db,'tasks',id,'comments')).then(function(snap){
+      return Promise.all(snap.docs.map(function(d){ return deleteDoc(doc(db,'tasks',id,'comments',d.id)); }));
+    }).catch(function(){}).then(function(){
+      return deleteDoc(doc(db,'tasks',id));
+    });
+  }
+  function renderTrash(){
+    var box = $('trashBody'); if (!box) return;
+    var trashed = state.tasks.filter(function(t){ return !!t.deletedAt; }).sort(function(a,b){
+      return (b.deletedAt||'').localeCompare(a.deletedAt||'');
+    });
+    if (!trashed.length){
+      box.innerHTML = '<div class="today-empty">A lixeira está vazia.</div>';
+      return;
+    }
+    box.innerHTML = '';
+    trashed.forEach(function(t){
+      var row = document.createElement('div');
+      row.className = 'trash-row';
+      row.innerHTML = '<span class="ti">'+esc(t.title||'(sem título)')+'</span>' +
+        '<span class="meta">excluída '+relTime(t.deletedAt)+'</span>' +
+        '<button class="btn btn-ghost" data-restore="'+t.id+'" type="button">Restaurar</button>' +
+        '<button class="btn btn-danger" data-purge="'+t.id+'" type="button">Excluir de vez</button>';
+      box.appendChild(row);
+    });
+    box.querySelectorAll('[data-restore]').forEach(function(btn){
+      btn.addEventListener('click', function(){ restoreTask(btn.dataset.restore); });
+    });
+    box.querySelectorAll('[data-purge]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        if (!confirm('Excluir esta tarefa definitivamente? Essa ação não pode ser desfeita.')) return;
+        permanentlyDeleteTask(btn.dataset.purge).then(function(){
+          toast('Tarefa excluída definitivamente.');
+          renderTrash();
+        }).catch(function(){ toast('Não deu para excluir.'); });
+      });
+    });
+  }
+
+  // ---------- status manager (colunas customizáveis) ----------
+  function renderStatusManage(){
+    var box = $('statusManageBody'); if (!box) return;
+    box.innerHTML = '';
+    state.editingStatuses.forEach(function(s, idx){
+      var row = document.createElement('div');
+      row.className = 'status-manage-row';
+      row.innerHTML =
+        '<input type="color" data-color="'+idx+'" value="'+(s.color||'#888888')+'">' +
+        '<input type="text" data-label="'+idx+'" value="'+esc(s.label||'')+'" placeholder="Nome da coluna">' +
+        '<label class="isdone"><input type="checkbox" data-isdone="'+idx+'"'+(s.isDone?' checked':'')+'> Concluída</label>' +
+        '<button type="button" class="rm" data-rmstatus="'+idx+'" title="Remover coluna">✕</button>';
+      box.appendChild(row);
+    });
+    box.querySelectorAll('[data-color]').forEach(function(el){
+      el.addEventListener('input', function(){ state.editingStatuses[+el.dataset.color].color = el.value; });
+    });
+    box.querySelectorAll('[data-label]').forEach(function(el){
+      el.addEventListener('input', function(){ state.editingStatuses[+el.dataset.label].label = el.value; });
+    });
+    box.querySelectorAll('[data-isdone]').forEach(function(el){
+      el.addEventListener('change', function(){ state.editingStatuses[+el.dataset.isdone].isDone = el.checked; });
+    });
+    box.querySelectorAll('[data-rmstatus]').forEach(function(el){
+      el.addEventListener('click', function(){
+        if (state.editingStatuses.length <= 1){ toast('Mantenha ao menos uma coluna.'); return; }
+        state.editingStatuses.splice(+el.dataset.rmstatus, 1);
+        renderStatusManage();
+      });
+    });
+  }
+  function openStatusManage(){
+    state.editingStatuses = state.statuses.map(function(s){ return Object.assign({}, s); });
+    renderStatusManage();
+    $('statusOverlay').hidden = false;
+  }
+  function closeStatusManage(){ $('statusOverlay').hidden = true; }
+  function saveStatusManage(){
+    var list = state.editingStatuses.filter(function(s){ return s.label && s.label.trim(); });
+    if (!list.length){ toast('Adicione ao menos uma coluna.'); return; }
+    list.forEach(function(s){ s.label = s.label.trim(); });
+    var validIds = {}; list.forEach(function(s){ validIds[s.id] = true; });
+    var fallbackId = list[0].id;
+    var reassignments = state.tasks.filter(function(t){ return t.status && !validIds[t.status]; });
+    Promise.all(reassignments.map(function(t){
+      return updateDoc(doc(db,'tasks',t.id), { status: fallbackId }).catch(function(){});
+    })).then(function(){
+      return setDoc(doc(db,'settings','board'), { statuses: list });
+    }).then(function(){
+      state.statuses = list;
+      toast('Colunas atualizadas.');
+      closeStatusManage();
+      renderAll();
+    }).catch(function(){ toast('Não deu para salvar as colunas.'); });
   }
 
   // ---------- events ----------
@@ -1282,11 +1713,16 @@
       var b = e.target.closest('button[data-view]'); if (!b) return;
       state.view = b.dataset.view;
       document.querySelectorAll('#viewSeg button').forEach(function(x){ x.classList.toggle('active', x===b); });
+      $('todayView').style.display = state.view==='today' ? '' : 'none';
       $('kanbanView').style.display = state.view==='kanban' ? '' : 'none';
       $('listView').style.display = state.view==='list' ? '' : 'none';
+      $('projectsView').style.display = state.view==='projects' ? '' : 'none';
       $('calendarView').style.display = state.view==='calendar' ? '' : 'none';
       if (state.view==='calendar') renderCalendar();
       if (state.view==='list') renderList();
+      if (state.view==='projects') renderProjects();
+      if (state.view==='today') renderToday();
+      renderBulkBar();
     });
     $('calSeg').addEventListener('click', function(e){
       var b = e.target.closest('button[data-cal]'); if (!b) return;
@@ -1337,8 +1773,63 @@
       d.style.display = shown ? 'none' : 'block';
     });
 
+    // ---- Lixeira ----
+    $('trashToggle').addEventListener('click', function(){ renderTrash(); $('trashOverlay').hidden = false; });
+    $('trashClose').addEventListener('click', function(){ $('trashOverlay').hidden = true; });
+    $('trashOverlay').addEventListener('click', function(e){ if (e.target.id==='trashOverlay') $('trashOverlay').hidden = true; });
+
+    // ---- Gerenciar colunas de status ----
+    $('manageStatusBtn').addEventListener('click', openStatusManage);
+    $('statusCancel').addEventListener('click', closeStatusManage);
+    $('statusOverlay').addEventListener('click', function(e){ if (e.target.id==='statusOverlay') closeStatusManage(); });
+    $('statusSave').addEventListener('click', saveStatusManage);
+    $('statusAddBtn').addEventListener('click', function(){
+      var used = {}; state.editingStatuses.forEach(function(s){ used[s.color]=true; });
+      var color = COLUMN_COLORS_DEFAULT.filter(function(c){ return !used[c]; })[0] || COLUMN_COLORS_DEFAULT[state.editingStatuses.length % COLUMN_COLORS_DEFAULT.length];
+      state.editingStatuses.push({ id: 'col_'+Date.now(), label: 'Nova coluna', color: color, isDone: false });
+      renderStatusManage();
+    });
+
+    // ---- Ações em massa ----
+    $('bulkStatus').addEventListener('change', function(){
+      var val = this.value; if (!val || !db) return;
+      var ids = Array.from(state.selectedIds);
+      Promise.all(ids.map(function(id){
+        return updateDoc(doc(db,'tasks',id), { status: val, updatedAt: new Date().toISOString() }).then(function(){
+          var t = state.tasks.filter(function(x){return x.id===id;})[0];
+          if (t) maybeSpawnRecurrence(t, val);
+        });
+      })).then(function(){
+        toast(ids.length+' tarefa(s) movida(s).');
+        clearSelection();
+      }).catch(function(){ toast('Não deu para mover algumas tarefas.'); });
+      this.value = '';
+    });
+    $('bulkAssignee').addEventListener('change', function(){
+      var val = this.value; if (!val || !db) return;
+      var ids = Array.from(state.selectedIds);
+      upsertMember(val);
+      Promise.all(ids.map(function(id){
+        return updateDoc(doc(db,'tasks',id), { assignee: val, updatedAt: new Date().toISOString() });
+      })).then(function(){
+        toast('Responsável definido para '+ids.length+' tarefa(s).');
+        clearSelection();
+      }).catch(function(){ toast('Não deu para atualizar algumas tarefas.'); });
+      this.value = '';
+    });
+    $('bulkTrash').addEventListener('click', function(){
+      var ids = Array.from(state.selectedIds);
+      if (!ids.length) return;
+      if (!confirm('Mover '+ids.length+' tarefa(s) para a lixeira?')) return;
+      Promise.all(ids.map(function(id){ return moveTaskToTrash(id); })).then(function(){
+        toast(ids.length+' tarefa(s) movida(s) para a lixeira.');
+        clearSelection();
+      }).catch(function(){ toast('Não deu para excluir algumas tarefas.'); });
+    });
+    $('bulkClear').addEventListener('click', clearSelection);
+
     document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape'){ closeTaskModal(); closeTaskPreview(); }
+      if (e.key === 'Escape'){ closeTaskModal(); closeTaskPreview(); closeStatusManage(); $('trashOverlay').hidden = true; }
     });
   }
 
