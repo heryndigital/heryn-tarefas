@@ -346,13 +346,22 @@
 
   .list-row.dragover-row{ outline:2px dashed var(--accent); outline-offset:-3px; }
 
-  /* ---------- Bulk select / checkbox column ---------- */
-  .list-row.with-check, .list-head.with-check{ grid-template-columns: 26px 118px 1fr 150px 170px 24px 84px; }
-  @media (max-width: 720px){
-    .list-row.with-check, .list-head.with-check{ grid-template-columns: 22px 90px 1fr 70px; }
+  /* ---------- Bulk select / checkbox column + inline editing (Lista) ---------- */
+  .list-row.with-check, .list-head.with-check{ grid-template-columns: 26px 148px 1fr 128px 148px 108px 132px; }
+  @media (max-width: 900px){
+    .list-row.with-check, .list-head.with-check{ grid-template-columns: 24px 140px 1fr; }
+    .list-row.with-check .list-optional, .list-head.with-check .list-optional{ display:none; }
   }
   .list-check{ display:flex; align-items:center; }
   .list-check input, .list-head.with-check > span:first-child input{ accent-color:var(--accent); width:15px; height:15px; cursor:pointer; }
+  .list-status-cell, .list-prio-cell{ display:flex; align-items:center; gap:6px; min-width:0; }
+  .list-inline-select, .list-inline-input{
+    width:100%; min-width:0; background:transparent; border:1px solid transparent; border-radius:7px;
+    color:var(--ink-2); font-size:12.5px; padding:5px 6px; cursor:pointer; font-family:inherit;
+  }
+  .list-inline-select:hover, .list-inline-input:hover{ background:var(--surface-2); border-color:var(--border-strong); }
+  .list-inline-select:focus, .list-inline-input:focus{ background:var(--surface-2); border-color:var(--accent); outline:none; cursor:text; }
+  .list-inline-input[type=date]{ cursor:pointer; }
   .bulk-bar{ display:flex; align-items:center; gap:10px; background:var(--surface-2); border:1px solid var(--border-strong); border-radius:12px; padding:9px 14px; margin-bottom:10px; font-size:12.5px; color:var(--ink-2); flex-wrap:wrap; }
   .bulk-bar select{ max-width:180px; }
   .bulk-bar .spacer2{ flex:1; }
@@ -494,7 +503,7 @@
         </div>
         <div class="list-wrap">
           <div class="list-head with-check">
-            <span><input type="checkbox" id="selectAllCheck" title="Selecionar tudo"></span><span>Status</span><span>Tarefa</span><span>Cliente</span><span>Responsável</span><span></span><span>Prazo</span>
+            <span><input type="checkbox" id="selectAllCheck" title="Selecionar tudo"></span><span>Status</span><span>Tarefa</span><span class="list-optional">Cliente</span><span class="list-optional">Responsável</span><span class="list-optional">Prioridade</span><span class="list-optional">Prazo</span>
           </div>
           <div id="listBody"></div>
         </div>
@@ -1114,26 +1123,98 @@
     row.draggable = true;
     var st = statusMeta(t.status);
     var prio = PRIORITY[t.priority] || PRIORITY.media;
-    var html = '';
+
     if (withCheck){
+      // ---- Lista: tudo editável em 1 clique, sem precisar abrir a tarefa ----
+      var html = '';
       html += '<span class="list-check"><input type="checkbox" data-select="'+t.id+'"'+(state.selectedIds.has(t.id)?' checked':'')+'></span>';
-    }
-    html += '<span class="list-status"><span class="status-dot" style="background:'+st.color+'"></span>'+esc(st.label)+'</span>';
-    html += '<span class="list-title">'+(t.recurrence && t.recurrence!=='none' ? '🔁 ' : '')+esc(t.title||'(sem título)')+'</span>';
-    html += '<span class="list-client">'+(t.client?esc(t.client):'—')+'</span>';
-    html += '<span class="list-assignee">'+(t.assignee ? avatarHTML(t.assignee,20)+'<span class="list-assignee-name">'+esc(t.assignee)+'</span>' : '—')+'</span>';
-    html += '<span class="prio-dot" style="background:'+prio.color+'" title="Prioridade '+prio.label+'"></span>';
-    html += '<span class="list-due'+(isOverdue(t)?' overdue':'')+'">'+(t.dueDate ? fmtDateShort(t.dueDate) : '—')+'</span>';
-    row.innerHTML = html;
-    row.addEventListener('click', function(){ openTaskPreview(t.id); });
-    if (withCheck){
+      html += '<span class="list-status-cell"><span class="status-dot" style="background:'+st.color+'"></span><select class="list-inline-select mono" data-edit-status></select></span>';
+      html += '<span class="list-title">'+(t.recurrence && t.recurrence!=='none' ? '🔁 ' : '')+esc(t.title||'(sem título)')+'</span>';
+      html += '<span class="list-optional"><input class="list-inline-input" data-edit-client value="'+esc(t.client||'')+'" placeholder="Cliente" autocomplete="off"></span>';
+      html += '<span class="list-optional"><select class="list-inline-select" data-edit-assignee></select></span>';
+      html += '<span class="list-optional list-prio-cell"><span class="prio-dot" style="background:'+prio.color+'"></span><select class="list-inline-select mono" data-edit-priority></select></span>';
+      html += '<span class="list-optional"><input type="date" class="list-inline-input mono" data-edit-due value="'+(t.dueDate||'')+'"></span>';
+      row.innerHTML = html;
+
+      var statusSel = row.querySelector('[data-edit-status]');
+      statusSel.innerHTML = state.statuses.map(function(s){ return '<option value="'+s.id+'"'+(s.id===t.status?' selected':'')+'>'+esc(s.label)+'</option>'; }).join('');
+
+      var names = {};
+      state.members.forEach(function(m){ names[m.name]=1; });
+      if (t.assignee) names[t.assignee] = 1;
+      var assigneeSel = row.querySelector('[data-edit-assignee]');
+      assigneeSel.innerHTML = '<option value="">— Sem responsável —</option>' + Object.keys(names).sort().map(function(n){
+        return '<option value="'+esc(n)+'"'+(n===t.assignee?' selected':'')+'>'+esc(n)+'</option>';
+      }).join('');
+
+      var prioSel = row.querySelector('[data-edit-priority]');
+      prioSel.innerHTML = ['baixa','media','alta'].map(function(p){
+        return '<option value="'+p+'"'+(p===t.priority?' selected':'')+'>'+esc(PRIORITY[p].label)+'</option>';
+      }).join('');
+
+      row.querySelectorAll('select, input').forEach(function(el){
+        el.addEventListener('click', function(e){ e.stopPropagation(); });
+        el.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+        el.addEventListener('dragstart', function(e){ e.stopPropagation(); e.preventDefault(); });
+      });
+
       var cb = row.querySelector('[data-select]');
-      cb.addEventListener('click', function(e){ e.stopPropagation(); });
       cb.addEventListener('change', function(){
         if (cb.checked) state.selectedIds.add(t.id); else state.selectedIds.delete(t.id);
         renderBulkBar();
       });
+
+      statusSel.addEventListener('change', function(){
+        if (!db) return;
+        var newStatus = statusSel.value;
+        var fromLabel = st.label;
+        updateDoc(doc(db,'tasks',t.id), { status: newStatus, updatedAt: new Date().toISOString() }).then(function(){
+          logActivity('moveu', { kind:'moved', taskTitle: t.title, from: fromLabel, to: statusMeta(newStatus).label });
+          maybeSpawnRecurrence(t, newStatus);
+        }).catch(function(){ toast('Não deu para mover a tarefa.'); });
+      });
+      assigneeSel.addEventListener('change', function(){
+        if (!db) return;
+        var val = assigneeSel.value;
+        if (val) upsertMember(val);
+        updateDoc(doc(db,'tasks',t.id), { assignee: val, updatedAt: new Date().toISOString() }).catch(function(){ toast('Não deu para atualizar o responsável.'); });
+      });
+      prioSel.addEventListener('change', function(){
+        if (!db) return;
+        updateDoc(doc(db,'tasks',t.id), { priority: prioSel.value, updatedAt: new Date().toISOString() }).catch(function(){ toast('Não deu para atualizar a prioridade.'); });
+      });
+      var clientInput = row.querySelector('[data-edit-client]');
+      function saveClient(){
+        if (!db) return;
+        var val = clientInput.value.trim();
+        if (val === (t.client||'')) return;
+        updateDoc(doc(db,'tasks',t.id), { client: val, updatedAt: new Date().toISOString() }).catch(function(){ toast('Não deu para atualizar o cliente.'); });
+      }
+      clientInput.addEventListener('blur', saveClient);
+      clientInput.addEventListener('keydown', function(e){ if (e.key==='Enter'){ e.preventDefault(); clientInput.blur(); } });
+      var dueInput = row.querySelector('[data-edit-due]');
+      dueInput.addEventListener('change', function(){
+        if (!db) return;
+        updateDoc(doc(db,'tasks',t.id), { dueDate: dueInput.value || null, updatedAt: new Date().toISOString() }).catch(function(){ toast('Não deu para atualizar o prazo.'); });
+      });
+
+      row.addEventListener('click', function(e){
+        if (e.target.closest('select, input, button')) return;
+        openTaskPreview(t.id);
+      });
+    } else {
+      // ---- Projetos / Hoje: linha só de leitura, abre a tarefa ao clicar ----
+      var html2 = '';
+      html2 += '<span class="list-status"><span class="status-dot" style="background:'+st.color+'"></span>'+esc(st.label)+'</span>';
+      html2 += '<span class="list-title">'+(t.recurrence && t.recurrence!=='none' ? '🔁 ' : '')+esc(t.title||'(sem título)')+'</span>';
+      html2 += '<span class="list-client">'+(t.client?esc(t.client):'—')+'</span>';
+      html2 += '<span class="list-assignee">'+(t.assignee ? avatarHTML(t.assignee,20)+'<span class="list-assignee-name">'+esc(t.assignee)+'</span>' : '—')+'</span>';
+      html2 += '<span class="prio-dot" style="background:'+prio.color+'" title="Prioridade '+prio.label+'"></span>';
+      html2 += '<span class="list-due'+(isOverdue(t)?' overdue':'')+'">'+(t.dueDate ? fmtDateShort(t.dueDate) : '—')+'</span>';
+      row.innerHTML = html2;
+      row.addEventListener('click', function(){ openTaskPreview(t.id); });
     }
+
     row.addEventListener('dragstart', function(e){
       dragListId = t.id;
       try{ e.dataTransfer.setData('text/plain', t.id); }catch(err){}
